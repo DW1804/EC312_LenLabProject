@@ -36,7 +36,7 @@ class ProductPageController extends Controller
         
         $products = $query->paginate(12);
         
-        return view('listing', compact('products'));
+        return view('products', compact('products'));
     }
     
     // API cho danh sách sản phẩm

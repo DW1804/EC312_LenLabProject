@@ -5,19 +5,32 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\ProductVariant;
 use App\Models\Voucher;
+use App\Models\Product;
+use App\Models\DigitalProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
-    // Hiển thị trang giỏ hàng cho user
+    // 1. Hiển thị trang giỏ hàng (Server Side Rendering)
     public function show()
     {
-        return view('cart');
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        $userId = Auth::id();
+        $cart = $this->getCartData($userId);
+        $subtotal = $this->calculateSubtotal($cart);
+
+        // Lấy thông tin voucher từ session
+        $voucherCode = session('voucher_code');
+        $voucherDiscount = session('voucher_discount', 0);
+
+        return view('cart', compact('cart', 'subtotal', 'voucherCode', 'voucherDiscount'));
     }
 
-    // Lấy giỏ hàng (API)
+    // 2. Lấy giỏ hàng (API / AJAX)
     public function index()
     {
         if (!Auth::check()) {
@@ -30,24 +43,11 @@ class CartController extends Controller
         }
 
         $userId = Auth::id();
-
-        $cart = Cart::where('user_id', $userId)
-            ->with(['product', 'variant', 'digitalProduct'])
-            ->orderBy('updated_at', 'desc')
-            ->get();
-
+        $cart = $this->getCartData($userId);
+        $subtotal = $this->calculateSubtotal($cart);
         $totalItems = $cart->sum('quantity');
 
-        $subtotal = $cart->sum(function ($item) {
-            $price = $item->price_at_time
-                ?? optional($item->variant)->price
-                ?? optional($item->product)->price
-                ?? optional($item->digitalProduct)->price
-                ?? 0;
-
-            return $price * $item->quantity;
-        });
-
+        // Format data cho API frontend
         $formattedCart = $cart->map(function ($item) {
             $baseData = [
                 'id' => $item->id,
@@ -96,118 +96,118 @@ class CartController extends Controller
         ]);
     }
 
-    // Thêm sản phẩm vào giỏ (Hỗ trợ cả sản phẩm thường và sản phẩm số)
+    // 3. Thêm sản phẩm (Logic gộp chung)
     public function add(Request $request)
     {
         if (!Auth::check()) {
             return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập'], 401);
         }
 
-        // Kiểm tra loại sản phẩm
         $productType = $request->input('product_type', 'normal');
         
         if ($productType === 'digital') {
             return $this->addDigitalProduct($request);
         }
 
-        // Sản phẩm thường - validation đầy đủ
+        return $this->addNormalProduct($request);
+    }
+
+    // Helper: Thêm sản phẩm thường (Tách ra để code gọn hơn)
+    private function addNormalProduct(Request $request)
+    {
         $request->validate([
             'product_id' => 'required|integer|exists:products,id',
-            'variant_id' => 'required|integer|exists:product_variants,id',
+            'variant_id' => 'nullable|integer|exists:product_variants,id',
+            'variant_name' => 'nullable|string',
             'quantity'   => 'required|integer|min:1',
         ]);
 
         $userId = Auth::id();
-        $variant = ProductVariant::findOrFail($request->variant_id);
+        $productId = $request->product_id;
+        $variantId = $request->variant_id;
+        $quantity = (int)$request->quantity;
 
-        // Đảm bảo variant thuộc product_id
-        if ((int)$variant->product_id !== (int)$request->product_id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Variant không thuộc sản phẩm này'
-            ], 422);
+        // Chuẩn bị dữ liệu giá và info
+        $price = 0;
+        $variantInfo = null;
+
+        if ($variantId) {
+            $variant = ProductVariant::findOrFail($variantId);
+            // Kiểm tra variant có thuộc product không
+            if ((int)$variant->product_id !== (int)$productId) {
+                return response()->json(['success' => false, 'message' => 'Variant không hợp lệ'], 422);
+            }
+            $price = $variant->price;
+            $variantInfo = [
+                'color' => $variant->color,
+                'size'  => $variant->size,
+                'image' => $variant->image,
+            ];
+        } else {
+            $product = Product::findOrFail($productId);
+            $price = $product->price;
+            if ($request->variant_name) {
+                $variantInfo = ['variant_name' => $request->variant_name];
+            }
         }
 
-        // Update/Insert theo (user_id, product_id, variant_id)
-        $item = Cart::where('user_id', $userId)
-            ->where('product_id', $request->product_id)
-            ->where('variant_id', $request->variant_id)
+        // Tìm item trong cart
+        $cartItem = Cart::where('user_id', $userId)
+            ->where('product_id', $productId)
             ->where('product_type', 'normal')
+            ->where('variant_id', $variantId)
             ->first();
 
-        if ($item) {
-            $item->quantity += (int)$request->quantity;
-            $item->price_at_time = $variant->price;
-            $item->variant_info = [
-                'color' => $variant->color ?? null,
-                'size'  => $variant->size ?? null,
-                'image' => $variant->image ?? null,
-            ];
-            $item->save();
+        if ($cartItem) {
+            $cartItem->quantity += $quantity;
+            $cartItem->price_at_time = $price; // Cập nhật giá mới nhất
+            if ($variantInfo) {
+                $cartItem->variant_info = $variantInfo;
+            }
+            $cartItem->save();
         } else {
             Cart::create([
                 'user_id' => $userId,
-                'product_id' => $request->product_id,
-                'variant_id' => $request->variant_id,
-                'quantity' => (int)$request->quantity,
-                'price_at_time' => $variant->price,
+                'product_id' => $productId,
+                'variant_id' => $variantId,
+                'quantity' => $quantity,
+                'price_at_time' => $price,
                 'product_type' => 'normal',
-                'variant_info' => [
-                    'color' => $variant->color ?? null,
-                    'size'  => $variant->size ?? null,
-                    'image' => $variant->image ?? null,
-                ],
+                'variant_info' => $variantInfo,
             ]);
         }
 
         $cartCount = Cart::where('user_id', $userId)->sum('quantity');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Đã thêm sản phẩm vào giỏ hàng',
-            'cart_count' => $cartCount
-        ]);
+        return response()->json(['success' => true, 'message' => 'Đã thêm vào giỏ', 'cart_count' => $cartCount]);
     }
 
-    // Thêm sản phẩm số vào giỏ hàng
+    // Helper: Thêm sản phẩm số
     private function addDigitalProduct(Request $request)
     {
         $request->validate([
             'product_id' => 'required|integer|exists:digital_products,id',
-            'quantity' => 'integer|min:1|max:1', // Sản phẩm số chỉ mua 1
-            'name' => 'required|string',
-            'price' => 'required|numeric|min:0'
         ]);
 
         $userId = Auth::id();
-        $digitalProduct = \App\Models\DigitalProduct::findOrFail($request->product_id);
+        $digitalProduct = DigitalProduct::findOrFail($request->product_id);
 
         if (!$digitalProduct->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sản phẩm này hiện không khả dụng'
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Sản phẩm không khả dụng'], 422);
         }
 
-        // Kiểm tra xem đã có trong giỏ hàng chưa (sản phẩm số không thể thêm nhiều lần)
-        $existingItem = Cart::where('user_id', $userId)
+        $exists = Cart::where('user_id', $userId)
             ->where('product_id', $request->product_id)
             ->where('product_type', 'digital')
-            ->first();
+            ->exists();
 
-        if ($existingItem) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Sản phẩm số này đã có trong giỏ hàng'
-            ], 422);
+        if ($exists) {
+            return response()->json(['success' => false, 'message' => 'Sản phẩm này đã có trong giỏ'], 422);
         }
 
-        // Thêm vào giỏ hàng
         Cart::create([
             'user_id' => $userId,
             'product_id' => $request->product_id,
-            'variant_id' => null, // Sản phẩm số không có variant
-            'quantity' => 1, // Luôn là 1
+            'quantity' => 1,
             'price_at_time' => $digitalProduct->price,
             'product_type' => 'digital',
             'variant_info' => [
@@ -218,126 +218,126 @@ class CartController extends Controller
         ]);
 
         $cartCount = Cart::where('user_id', $userId)->sum('quantity');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Đã thêm sản phẩm số vào giỏ hàng',
-            'cart_count' => $cartCount
-        ]);
+        return response()->json(['success' => true, 'message' => 'Đã thêm vào giỏ', 'cart_count' => $cartCount]);
     }
 
-    // Tăng giảm số lượng
+    // 4. Update Quantity
     public function updateQuantity(Request $request)
     {
-        if (!Auth::check()) {
-            return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập'], 401);
-        }
+        if (!Auth::check()) return response()->json(['success' => false], 401);
 
         $request->validate([
             'id' => 'required|integer|exists:cart,id',
             'action' => 'required|in:increase,decrease',
         ]);
 
-        $item = Cart::where('id', $request->id)
-            ->where('user_id', Auth::id())
-            ->first();
+        $item = Cart::where('id', $request->id)->where('user_id', Auth::id())->first();
 
-        if (!$item) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm trong giỏ hàng'], 404);
-        }
+        if (!$item) return response()->json(['success' => false], 404);
 
         if ($request->action === 'increase') {
-            $item->quantity++;
-            $item->save();
-            return response()->json(['success' => true, 'new_quantity' => $item->quantity]);
+            // Với sản phẩm số, không cho tăng quá 1
+            if ($item->product_type === 'digital') {
+                return response()->json(['success' => false, 'message' => 'Sản phẩm số chỉ mua được 1']);
+            }
+            $item->increment('quantity');
+        } else {
+            if ($item->quantity > 1) {
+                $item->decrement('quantity');
+            } else {
+                $item->delete();
+                return response()->json(['success' => true, 'removed' => true]);
+            }
         }
 
-        // decrease
-        if ($item->quantity > 1) {
-            $item->quantity--;
-            $item->save();
-            return response()->json(['success' => true, 'new_quantity' => $item->quantity]);
-        }
-
-        $item->delete();
-        return response()->json(['success' => true, 'removed' => true]);
+        return response()->json(['success' => true, 'new_quantity' => $item->quantity]);
     }
 
-    // Xóa sản phẩm
+    // 5. Delete Item
     public function delete(Request $request)
     {
-        if (!Auth::check()) {
-            return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập'], 401);
-        }
+        if (!Auth::check()) return response()->json(['success' => false], 401);
 
-        $request->validate([
-            'id' => 'required|integer|exists:cart,id',
-        ]);
-
-        $deleted = Cart::where('id', $request->id)
-            ->where('user_id', Auth::id())
-            ->delete();
-
-        return response()->json([
-            'success' => (bool)$deleted,
-            'message' => $deleted ? 'Đã xóa sản phẩm khỏi giỏ hàng' : 'Không tìm thấy sản phẩm trong giỏ hàng'
-        ]);
+        $deleted = Cart::where('id', $request->id)->where('user_id', Auth::id())->delete();
+        return response()->json(['success' => (bool)$deleted]);
     }
 
-    // Áp dụng voucher
+    // 6. Apply Voucher
     public function applyVoucher(Request $request)
     {
-        if (!Auth::check()) {
-            return response()->json(["success" => false, "message" => "Vui lòng đăng nhập"], 401);
+        if (!Auth::check()) return response()->json(["success" => false, "message" => "Vui lòng đăng nhập"], 401);
+
+        $request->validate(['code' => 'required|string']);
+
+        $voucher = Voucher::where('code', $request->code)->where('active', 1)->first();
+
+        if (!$voucher) return response()->json(["success" => false, "message" => "Mã không hợp lệ"], 422);
+
+        // Check thời gian
+        $now = now();
+        if (($voucher->start_date && $now->lt($voucher->start_date)) || 
+            ($voucher->end_date && $now->gt($voucher->end_date))) {
+            return response()->json(["success" => false, "message" => "Mã không khả dụng"], 422);
         }
 
-        $request->validate([
-            'code' => 'required|string'
-        ]);
-
-        $voucher = Voucher::where('code', $request->code)
-            ->where('active', 1)
-            ->first();
-
-        if (!$voucher) {
-            return response()->json(["success" => false, "message" => "Mã không hợp lệ"], 422);
-        }
-
-        if ($voucher->start_date && now()->lt($voucher->start_date)) {
-            return response()->json(["success" => false, "message" => "Voucher chưa bắt đầu"], 422);
-        }
-
-        if ($voucher->end_date && now()->gt($voucher->end_date)) {
-            return response()->json(["success" => false, "message" => "Voucher đã hết hạn"], 422);
-        }
-
-        $userId = Auth::id();
-        $cart = Cart::where('user_id', $userId)->with(['product', 'variant'])->get();
-
-        $subtotal = $cart->sum(function ($item) {
-            $price = $item->price_at_time
-                ?? optional($item->variant)->price
-                ?? optional($item->product)->price
-                ?? 0;
-            return $price * $item->quantity;
-        });
+        // Tính subtotal để check điều kiện
+        $cart = $this->getCartData(Auth::id());
+        $subtotal = $this->calculateSubtotal($cart);
 
         if ($voucher->min_order_value && $subtotal < $voucher->min_order_value) {
-            return response()->json(["success" => false, "message" => "Chưa đủ giá trị đơn tối thiểu"], 422);
+            return response()->json([
+                "success" => false, 
+                "message" => "Đơn tối thiểu " . number_format($voucher->min_order_value) . "đ"
+            ], 422);
         }
 
+        // Tính discount
+        $discount = 0;
+        $discountPercent = 0;
         if ($voucher->type === "fixed") {
             $discount = (int) $voucher->discount_value;
-            $discountPercent = 0;
         } else {
             $discount = (int) ($subtotal * ($voucher->discount_value / 100));
             $discountPercent = (int) $voucher->discount_value;
+            // Nếu có giảm tối đa (max_discount_amount) thì check thêm ở đây
         }
 
-        return view('cart', [
-            'cart' => $cart,         // Truyền biến $cart sang view
-            'subtotal' => $subtotal, // Truyền biến $subtotal sang view
-            'total_items' => $total_items
-    ]);
+        // Lưu session
+        session([
+            'voucher_code' => $voucher->code,
+            'voucher_discount' => $discount,
+            'voucher_type' => $voucher->type,
+            'voucher_value' => $voucher->discount_value
+        ]);
+
+        return response()->json([
+            "success" => true,
+            "message" => "Áp dụng thành công",
+            "discount" => $discount,
+            "discount_percent" => $discountPercent,
+            "voucher_code" => $voucher->code
+        ]);
+    }
+
+    // ================= PRIVATE HELPERS (Tránh lặp code) =================
+
+    private function getCartData($userId)
+    {
+        return Cart::where('user_id', $userId)
+            ->with(['product', 'variant', 'digitalProduct'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+    }
+
+    private function calculateSubtotal($cartCollection)
+    {
+        return $cartCollection->sum(function ($item) {
+            $price = $item->price_at_time
+                ?? optional($item->variant)->price
+                ?? optional($item->product)->price
+                ?? optional($item->digitalProduct)->price
+                ?? 0;
+            return $price * $item->quantity;
+        });
     }
 }

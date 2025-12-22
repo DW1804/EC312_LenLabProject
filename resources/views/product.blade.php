@@ -204,14 +204,11 @@
     <div class="product-container">
         <!-- Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-700">
-            <button onclick="window.history.back()" class="text-white hover:text-primary transition-colors">
+            <button onclick="goBack()" class="text-white hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-2xl">arrow_back</span>
             </button>
             <h1 class="text-white font-semibold text-lg">Chi tiết sản phẩm</h1>
             <div class="flex items-center gap-2">
-                <button class="text-white hover:text-primary transition-colors" onclick="toggleWishlist()">
-                    <span class="material-symbols-outlined text-2xl" id="wishlistIcon">favorite_border</span>
-                </button>
                 <button class="text-white hover:text-primary transition-colors">
                     <span class="material-symbols-outlined text-2xl">share</span>
                 </button>
@@ -350,8 +347,21 @@
     </div>
 
     <script>
+        // Handle back navigation with return URL support
+        function goBack() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('return');
+            
+            if (returnUrl) {
+                // Decode the return URL and navigate back
+                window.location.href = decodeURIComponent(returnUrl);
+            } else {
+                // Default back to products page
+                window.location.href = '/san-pham';
+            }
+        }
+        
         let currentQuantity = 1;
-        let isWishlisted = false;
         let selectedVariant = null;
         let productVariants = [];
         let productImages = @json($productImages ?? []);
@@ -396,19 +406,6 @@
             if (currentQuantity > 1) {
                 currentQuantity--;
                 $('#quantity').text(currentQuantity);
-            }
-        }
-
-        function toggleWishlist() {
-            isWishlisted = !isWishlisted;
-            const icon = $('#wishlistIcon');
-            
-            if (isWishlisted) {
-                icon.text('favorite');
-                icon.addClass('text-red-500');
-            } else {
-                icon.text('favorite_border');
-                icon.removeClass('text-red-500');
             }
         }
 

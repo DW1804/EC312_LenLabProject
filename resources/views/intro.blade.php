@@ -165,7 +165,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button class="relative flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors" onclick="window.location.href='/gio-hang'">
+                    <button class="relative flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors" onclick="window.location.href='/cart'">
                         <span class="material-symbols-outlined text-white">shopping_bag</span>
                         <span class="absolute top-2 right-2 flex h-2 w-2">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -422,7 +422,7 @@
                                     <span class="material-symbols-outlined text-primary">info</span>
                                     <span class="text-white font-medium">Giới thiệu</span>
                                 </a>
-                                <a href="/gio-hang" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                <a href="/cart" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
                                     <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">shopping_cart</span>
                                     <span class="text-white font-medium">Giỏ hàng</span>
                                 </a>

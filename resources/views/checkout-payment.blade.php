@@ -55,7 +55,7 @@
             background: #FAC638;
             border-radius: 2px;
             transition: width 0.3s ease;
-            width: 66%; /* 66% for step 2 of 3 */
+            width: 100%; /* 100% for step 3 of 3 */
         }
         
         .payment-method {
@@ -106,7 +106,7 @@
     <div class="payment-container">
         <!-- Header -->
         <div class="flex items-center justify-between p-4">
-            <button onclick="window.history.back()" class="text-white hover:text-primary transition-colors">
+            <button onclick="window.location.href='/checkout/confirm'" class="text-white hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-2xl">arrow_back</span>
             </button>
             <h1 class="text-white font-semibold text-lg">Phương thức thanh toán</h1>
@@ -171,7 +171,7 @@
                             </div>
                             <div class="flex-1">
                                 <p class="text-white font-semibold">Chuyển khoản ngân hàng</p>
-                                <p class="text-gray-400 text-sm">Hỗ trợ quét mã QR VietQR</p>
+                                <p class="text-gray-400 text-sm">Hỗ trợ quét mã QR</p>
                             </div>
                         </div>
                     </div>
@@ -188,8 +188,8 @@
                 
                 <!-- Chính sách mua hàng -->
                 <div class="text-gray-400 text-sm leading-relaxed">
-                    <p class="mb-2">Bằng cách hoàn tất thanh toán, bạn đã đồng ý với các điều khoản và 
-                    <a href="#" class="text-primary underline hover:text-primary/80 transition-colors">chính sách mua hàng</a> 
+                    <p class="mb-2">Bằng cách hoàn tất thanh toán, bạn đã đồng ý với 
+                    <a href="/chinh-sach" class="text-primary underline hover:text-primary/80 transition-colors"> các điều khoản và chính sách mua hàng</a> 
                     của chúng tôi.</p>
                 </div>
             </div>
@@ -200,18 +200,56 @@
 
         <!-- Fixed Bottom Section -->
         <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-[400px] bg-background-dark p-6">
-            <!-- Total Amount -->
-            <div class="mb-4">
+            <!-- Total Amount Breakdown -->
+            <div class="mb-4 space-y-2">
                 <div class="flex justify-between items-center">
-                    <span class="text-gray-400 text-sm">Tổng thanh toán</span>
-                    <span class="total-amount">{{ number_format($subtotal + 30000) }} đ</span>
+                    <span class="text-gray-400 text-sm">Tiền hàng</span>
+                    <span class="text-white text-sm">{{ number_format($subtotal) }}đ</span>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Phí vận chuyển</span>
+                    <span class="text-white text-sm">{{ number_format($shippingFee) }}đ</span>
+                </div>
+                
+                @if(isset($deliveryTime))
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Thời gian giao hàng</span>
+                    <span class="text-primary text-sm">{{ $deliveryTime }}</span>
+                </div>
+                @endif
+                
+                @php
+                    // Calculate final total
+                    $finalTotal = $subtotal + $shippingFee - ($voucherDiscount ?? 0);
+                @endphp
+                
+                @if(isset($voucherDiscount) && $voucherDiscount > 0)
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Giảm giá</span>
+                    <span class="text-green-400 text-sm">-{{ number_format($voucherDiscount) }}đ</span>
+                </div>
+                @if(isset($voucherCode))
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Mã: {{ $voucherCode }}</span>
+                </div>
+                @endif
+                @endif
+                
+                <hr class="border-gray-700 my-2">
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-white font-bold text-lg">Tổng cộng</span>
+                    <div class="text-right">
+                        <div class="total-amount">{{ number_format($finalTotal) }}đ</div>
+                    </div>
                 </div>
             </div>
             
             <!-- Continue Button -->
             <button onclick="placeOrder()" class="checkout-btn w-full py-4 text-black font-bold text-lg flex items-center justify-center gap-2">
-                Tiếp tục
-                <span class="material-symbols-outlined">arrow_forward</span>
+                Đặt hàng
+                <span class="material-symbols-outlined">check_circle</span>
             </button>
         </div>
     </div>
@@ -249,13 +287,12 @@
         });
 
         function changeAddress() {
-            window.location.href = '/checkout';
+            window.location.href = '/checkout/confirm';
         }
 
         function placeOrder() {
-            const orderData = {
-                payment_method: selectedPaymentMethod,
-                note: ''
+            const paymentData = {
+                payment_method: selectedPaymentMethod
             };
 
             $.ajaxSetup({
@@ -270,36 +307,63 @@
                 Đang xử lý...
             `);
 
-            $.post('/api/checkout/create-order', orderData, function(response) {
-                if (response.success) {
-                    // Show success message
-                    $('.checkout-btn').removeClass('bg-primary').addClass('bg-green-500').html(`
-                        <span class="material-symbols-outlined mr-2">check_circle</span>
-                        Đặt hàng thành công!
-                    `);
+            // If bank transfer, redirect to bank transfer page
+            if (selectedPaymentMethod === 'bank_transfer') {
+                $.post('/api/checkout/prepare-bank-transfer', paymentData, function(response) {
+                    if (response.success) {
+                        window.location.href = `/checkout/bank-transfer?order_code=${response.order_code}&total=${response.total}`;
+                    } else {
+                        alert('Có lỗi xảy ra: ' + response.message);
+                        $('.checkout-btn').prop('disabled', false).html(`
+                            Đặt hàng
+                            <span class="material-symbols-outlined">check_circle</span>
+                        `);
+                    }
+                }).fail(function(xhr) {
+                    let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
                     
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1500);
-                } else {
-                    alert('Có lỗi xảy ra: ' + response.message);
+                    alert(errorMessage);
                     $('.checkout-btn').prop('disabled', false).html(`
-                        Tiếp tục
-                        <span class="material-symbols-outlined">arrow_forward</span>
+                        Đặt hàng
+                        <span class="material-symbols-outlined">check_circle</span>
                     `);
-                }
-            }).fail(function(xhr) {
-                let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                
-                alert(errorMessage);
-                $('.checkout-btn').prop('disabled', false).html(`
-                    Tiếp tục
-                    <span class="material-symbols-outlined">arrow_forward</span>
-                `);
-            });
+                });
+            } else {
+                // For COD, create order directly
+                $.post('/api/checkout/create-order', paymentData, function(response) {
+                    if (response.success) {
+                        // Show success state
+                        $('.checkout-btn').removeClass('bg-primary').addClass('bg-green-500').html(`
+                            <span class="material-symbols-outlined mr-2">check_circle</span>
+                            Đặt hàng thành công!
+                        `);
+                        
+                        setTimeout(() => {
+                            window.location.href = response.redirect_url;
+                        }, 1000);
+                    } else {
+                        alert('Có lỗi xảy ra: ' + response.message);
+                        $('.checkout-btn').prop('disabled', false).html(`
+                            Đặt hàng
+                            <span class="material-symbols-outlined">check_circle</span>
+                        `);
+                    }
+                }).fail(function(xhr) {
+                    let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    alert(errorMessage);
+                    $('.checkout-btn').prop('disabled', false).html(`
+                        Đặt hàng
+                        <span class="material-symbols-outlined">check_circle</span>
+                    `);
+                });
+            }
         }
     </script>
 </body>

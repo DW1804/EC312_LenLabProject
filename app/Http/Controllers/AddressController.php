@@ -60,19 +60,22 @@ class AddressController extends Controller
     public function store(Request $request)
     {
         try {
+            // Validate without is_default first
             $validated = $request->validate([
                 'full_name' => 'required|string|max:255',
                 'phone' => 'required|string|max:20',
                 'province_id' => 'required|exists:provinces,id',
                 'ward_id' => 'required|exists:wards,id',
-                'specific_address' => 'required|string|max:500',
-                'is_default' => 'boolean'
+                'specific_address' => 'required|string|max:500'
             ]);
 
+            // Handle is_default separately
+            $isDefaultInput = $request->input('is_default');
+            $validated['is_default'] = in_array($isDefaultInput, [true, 'true', 1, '1'], true);
             $validated['user_id'] = Auth::id();
 
             // Nếu đặt làm mặc định → reset các địa chỉ khác
-            if (!empty($validated['is_default'])) {
+            if ($validated['is_default']) {
                 Auth::user()->addresses()->update(['is_default' => false]);
             }
 
@@ -84,6 +87,7 @@ class AddressController extends Controller
                 'message' => 'Đã thêm địa chỉ mới'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error creating address:', ['error' => $e->getMessage(), 'request' => $request->all()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Không thể thêm địa chỉ: ' . $e->getMessage()
@@ -97,16 +101,20 @@ class AddressController extends Controller
         try {
             $address = Auth::user()->addresses()->findOrFail($id);
 
+            // Validate without is_default first
             $validated = $request->validate([
                 'full_name' => 'required|string|max:255',
                 'phone' => 'required|string|max:20',
                 'province_id' => 'required|exists:provinces,id',
                 'ward_id' => 'required|exists:wards,id',
-                'specific_address' => 'required|string|max:500',
-                'is_default' => 'boolean'
+                'specific_address' => 'required|string|max:500'
             ]);
 
-            if (!empty($validated['is_default'])) {
+            // Handle is_default separately
+            $isDefaultInput = $request->input('is_default');
+            $validated['is_default'] = in_array($isDefaultInput, [true, 'true', 1, '1'], true);
+
+            if ($validated['is_default']) {
                 Auth::user()
                     ->addresses()
                     ->where('id', '!=', $id)
@@ -121,6 +129,7 @@ class AddressController extends Controller
                 'message' => 'Đã cập nhật địa chỉ'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error updating address:', ['error' => $e->getMessage(), 'request' => $request->all()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Không thể cập nhật địa chỉ: ' . $e->getMessage()

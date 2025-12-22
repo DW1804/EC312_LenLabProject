@@ -62,29 +62,6 @@
             border-radius: 12px;
         }
         
-        .heart-icon {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 24px;
-            height: 24px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .heart-icon:hover {
-            background: rgba(250, 198, 56, 0.8);
-        }
-        
-        .heart-icon.liked {
-            background: #ef4444;
-        }
-        
         .add-btn {
             position: absolute;
             bottom: 8px;
@@ -169,7 +146,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button class="relative flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors" onclick="window.location.href='/gio-hang'">
+                    <button class="relative flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors" onclick="window.location.href='/cart'">
                         <span class="material-symbols-outlined text-white">shopping_bag</span>
                         <span class="absolute top-2 right-2 flex h-2 w-2">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -519,9 +496,6 @@
                     <div class="relative mb-3">
                         <img src="${imageUrl}" alt="${product.name}" class="product-image" 
                              onerror="this.src='https://via.placeholder.com/200x120/${bgColor.substring(1)}/FFFFFF?text=${encodeURIComponent(product.name.substring(0, 2))}'">
-                        <div class="heart-icon" onclick="event.stopPropagation(); toggleWishlist(${product.id})">
-                            <span class="material-symbols-outlined text-white text-sm">favorite_border</span>
-                        </div>
                         ${product.is_new ? '<div class="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">Mới</div>' : ''}
                     </div>
                     
@@ -549,11 +523,6 @@
 
         function viewProduct(productId) {
             window.location.href = `/san-pham/${productId}`;
-        }
-
-        function toggleWishlist(productId) {
-            // Toggle wishlist functionality
-            console.log('Toggle wishlist for product:', productId);
         }
 
         function addToCart(productId) {

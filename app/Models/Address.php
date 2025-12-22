@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Address extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'full_name',
@@ -13,37 +16,40 @@ class Address extends Model
         'province_id',
         'ward_id',
         'specific_address',
-        'is_default',
+        'is_default'
     ];
 
     protected $casts = [
-        'is_default' => 'boolean',
+        'is_default' => 'boolean'
     ];
 
-    // Quan hệ user
+    // Relationship with User
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Quan hệ tỉnh
+    // Relationship with Province
     public function province()
     {
         return $this->belongsTo(Province::class);
     }
 
-    // Quan hệ phường/xã
+    // Relationship with Ward
     public function ward()
     {
         return $this->belongsTo(Ward::class);
     }
 
-    // Địa chỉ đầy đủ để hiển thị
+    // Get full address string
     public function getFullAddressAttribute()
     {
-        $provinceName = $this->province?->name ?? '';
-        $wardName = $this->ward?->name ?? '';
+        $parts = [
+            $this->specific_address,
+            $this->ward ? $this->ward->name : null,
+            $this->province ? $this->province->name : null
+        ];
 
-        return trim("{$this->specific_address}, {$wardName}, {$provinceName}", ', ');
+        return implode(', ', array_filter($parts));
     }
 }

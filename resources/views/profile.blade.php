@@ -77,7 +77,7 @@
     <div class="profile-container">
         <!-- Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-700">
-            <button onclick="window.history.back()" class="text-white hover:text-primary transition-colors">
+            <button onclick="window.location.href='/'" class="text-white hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-2xl">arrow_back</span>
             </button>
             <h1 class="text-white font-semibold text-lg">Hồ sơ của tôi</h1>
@@ -93,37 +93,13 @@
             </div>
             
             <h2 class="text-white text-xl font-semibold mb-1">{{ Auth::user()->name }}</h2>
-            <p class="text-primary text-sm font-medium mb-1">Thành viên thân thiết</p>
             <p class="text-gray-400 text-sm">{{ Auth::user()->email }}</p>
-            
-            <!-- Stats -->
-            <div class="flex justify-center gap-8 mt-6">
-                <div class="stats-card rounded-xl p-4 text-center min-w-[140px]">
-                    <div class="text-white text-2xl font-bold">12</div>
-                    <div class="text-gray-400 text-xs">Yêu thích</div>
-                </div>
-                <div class="stats-card rounded-xl p-4 text-center min-w-[140px]">
-                    <div class="text-white text-2xl font-bold">2</div>
-                    <div class="text-gray-400 text-xs">Đang giao</div>
-                </div>
-            </div>
         </div>
 
         <!-- Menu Section: MUA SẮM -->
         <div class="px-4 mb-6">
             <h3 class="text-gray-400 text-sm font-medium mb-3 uppercase tracking-wider">MUA SẮM</h3>
-            
-            <!-- Sản phẩm yêu thích -->
-            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/wishlist'">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-red-400">favorite</span>
-                    </div>
-                    <span class="text-white font-medium">Sản phẩm yêu thích</span>
-                </div>
-                <span class="material-symbols-outlined text-gray-400">chevron_right</span>
-            </div>
-            
+                      
             <!-- Đơn hàng của tôi -->
             <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/orders'">
                 <div class="flex items-center gap-4">
@@ -132,8 +108,18 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-white font-medium">Đơn hàng của tôi</span>
-                        <span class="badge px-2 py-1 rounded-full">Mới</span>
                     </div>
+                </div>
+                <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+            </div>
+            
+            <!-- Voucher của tôi -->
+            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/vouchers'">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-orange-400">local_offer</span>
+                    </div>
+                    <span class="text-white font-medium">Voucher của tôi</span>
                 </div>
                 <span class="material-symbols-outlined text-gray-400">chevron_right</span>
             </div>
@@ -155,7 +141,7 @@
             <h3 class="text-gray-400 text-sm font-medium mb-3 uppercase tracking-wider">CÀI ĐẶT & ỨNG DỤNG</h3>
             
             <!-- Cài đặt tài khoản -->
-            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="showAccountSettings()">
+            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/profile/edit'">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
                         <span class="material-symbols-outlined text-purple-400">settings</span>
@@ -166,7 +152,7 @@
             </div>
             
             <!-- Trung tâm trợ giúp -->
-            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/help'">
+            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='#'">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 bg-indigo-500/20 rounded-full flex items-center justify-center">
                         <span class="material-symbols-outlined text-indigo-400">help</span>

@@ -3,11 +3,27 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
+// ✅ Facades / Helpers
+use App\Helpers\SettingsHelper;
+use App\Helpers\ShippingHelper;
+use App\Models\Province;
+use App\Models\Address;
+
+// ✅ User Controllers
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ProductPageController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\AddressController;
+use App\Http\Controllers\OrderController as UserOrderController; // Alias để tránh nhầm với Admin
+use App\Http\Controllers\DigitalProductController as UserDigitalProductController; // Alias để tránh nhầm với Admin
 
-// ✅ ADMIN controllers
+// ✅ ADMIN Controllers
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CustomerController;
@@ -15,12 +31,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UiConfigController;
 use App\Http\Controllers\Admin\DigitalProductController;
-// ✅ Site controllers
-use App\Http\Controllers\ProductPageController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CartController;
-//use App\Http\Controllers\PostController;
-use App\Http\Controllers\ReviewController;
+
 // (Nếu có marketing controllers thì import thêm, ví dụ)
 // use App\Http\Controllers\Marketing\PostController as MarketingPostController;
 // use App\Http\Controllers\Marketing\BannerController as MarketingBannerController;
@@ -29,7 +40,7 @@ Route::get('/', fn () => view('landingpage'));
 
 // Dynamic CSS route
 Route::get('/css/dynamic.css', function () {
-    $css = \App\Helpers\SettingsHelper::generateDynamicCss();
+    $css = SettingsHelper::generateDynamicCss();
     return response($css)->header('Content-Type', 'text/css');
 })->name('dynamic.css');
 
@@ -38,15 +49,17 @@ Route::get('/san-pham', [ProductPageController::class, 'index'])->name('products
 Route::get('/san-pham/{id}', [ProductPageController::class, 'show'])->name('product.detail');
 
 // Digital Products for customers
-Route::get('/san-pham-so', [\App\Http\Controllers\DigitalProductController::class, 'index'])->name('digital-products.index');
-Route::get('/san-pham-so/{id}', [\App\Http\Controllers\DigitalProductController::class, 'show'])->name('digital-products.show');
-Route::post('/san-pham-so/{id}/mua', [\App\Http\Controllers\DigitalProductController::class, 'purchase'])->name('digital-products.purchase');
-Route::get('/tai-xuong/{orderCode}', [\App\Http\Controllers\DigitalProductController::class, 'download'])->name('digital-products.download');
-Route::get('/tai-xuong/{orderCode}/file/{fileIndex}', [\App\Http\Controllers\DigitalProductController::class, 'downloadFile'])->name('digital-products.download-file');
+Route::get('/san-pham-so', [UserDigitalProductController::class, 'index'])->name('digital-products.index');
+Route::get('/san-pham-so/{id}', [UserDigitalProductController::class, 'show'])->name('digital-products.show');
+Route::post('/san-pham-so/{id}/mua', [UserDigitalProductController::class, 'purchase'])->name('digital-products.purchase');
+Route::get('/tai-xuong/{orderCode}', [UserDigitalProductController::class, 'download'])->name('digital-products.download');
+Route::get('/tai-xuong/{orderCode}/file/{fileIndex}', [UserDigitalProductController::class, 'downloadFile'])->name('digital-products.download-file');
 
 Route::get('/gioi-thieu', fn () => view('intro'))->name('about');
 
-Route::get('/gio-hang', [CartController::class, 'show'])->name('cart');
+Route::get('/cart', [CartController::class, 'show'])->name('cart');
+
+Route::get('/vouchers', [VoucherController::class, 'index'])->name('vouchers');
 
 // Dashboard (user) -> redirect home
 Route::get('/dashboard', fn () => redirect('/'))
@@ -55,7 +68,35 @@ Route::get('/dashboard', fn () => redirect('/'))
 
 // Profile
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', function () {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập');
+            }
+            return view('profile', compact('user'));
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    })->name('profile');
+    
+    Route::get('/addresses', function() {
+        return view('addresses');
+    })->name('addresses.index');
+    Route::get('/addresses/create', function() {
+        return view('address-form');
+    })->name('addresses.create');
+    Route::get('/addresses/{id}/edit', function($id) {
+        $address = Address::where('user_id', Auth::id())->findOrFail($id);
+        return view('address-form', compact('address'));
+    })->name('addresses.edit');
+    
+    // Profile edit routes
+    Route::get('/profile/edit', function() {
+        return view('profile-edit');
+    })->name('profile.edit');
+    Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
@@ -67,7 +108,6 @@ Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
 // ---------------- ADMIN AUTH ----------------
-// ✅ không để trong group admin middleware
 Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
 Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.post');
 Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
@@ -77,6 +117,7 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/ui-configuration', [UiConfigController::class, 'index'])->name('admin.ui_config');
     Route::get('/products/digital', [DigitalProductController::class, 'index'])->name('admin.products.digital');
+    
     // UI Configuration API routes
     Route::post('/ui-configuration/update', [UiConfigController::class, 'update'])->name('admin.ui_config.update');
     Route::get('/ui-configuration/settings', [UiConfigController::class, 'getSettings'])->name('admin.ui_config.settings');
@@ -110,58 +151,107 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
     Route::delete('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete');
-    Route::delete('/products', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete');
+    // Dòng dưới bị trùng route delete/products (bulk delete), nên giữ 1 cái
+    // Route::delete('/products', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete'); 
     Route::post('/products/{id}/toggle-active', [ProductController::class, 'toggleActive'])->name('admin.products.toggleActive');
     
-    // Digital Products
-    Route::get('/digital-products', [App\Http\Controllers\Admin\DigitalProductController::class, 'index'])->name('admin.digital-products.index');
-    Route::post('/digital-products', [App\Http\Controllers\Admin\DigitalProductController::class, 'store'])->name('admin.digital-products.store');
-    Route::post('/digital-products/upload', [App\Http\Controllers\Admin\DigitalProductController::class, 'upload'])->name('admin.digital-products.upload');
-    Route::post('/digital-products/add-link', [App\Http\Controllers\Admin\DigitalProductController::class, 'addLink'])->name('admin.digital-products.add-link');
-    Route::delete('/digital-products/delete', [App\Http\Controllers\Admin\DigitalProductController::class, 'delete'])->name('admin.digital-products.delete');
-    Route::post('/digital-products/{id}/toggle-active', [App\Http\Controllers\Admin\DigitalProductController::class, 'toggleActive'])->name('admin.digital-products.toggle-active');
+    // Digital Products (Admin)
+    Route::get('/digital-products', [DigitalProductController::class, 'index'])->name('admin.digital-products.index');
+    Route::post('/digital-products', [DigitalProductController::class, 'store'])->name('admin.digital-products.store');
+    Route::post('/digital-products/upload', [DigitalProductController::class, 'upload'])->name('admin.digital-products.upload');
+    Route::post('/digital-products/add-link', [DigitalProductController::class, 'addLink'])->name('admin.digital-products.add-link');
+    Route::delete('/digital-products/delete', [DigitalProductController::class, 'delete'])->name('admin.digital-products.delete');
+    Route::post('/digital-products/{id}/toggle-active', [DigitalProductController::class, 'toggleActive'])->name('admin.digital-products.toggle-active');
 });
 
 // ---------------- MARKETING AREA ----------------
-// Nếu bạn đã fix middleware admin.role rồi thì mở lại
 Route::prefix('marketing')->middleware(['admin', 'admin.role:marketing'])->group(function () {
     Route::get('/dashboard', fn () => 'MARKETING DASHBOARD')->name('marketing.dashboard');
-    // Route::resource('/posts', MarketingPostController::class)->names('marketing.posts');
-    // Route::resource('/banners', MarketingBannerController::class)->names('marketing.banners');
 });
 
-// Public post detail
-//Route::get('/bai-viet/{id}', [PostController::class, 'show'])->name('post.show');
+// Checkout routes
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/checkout/confirm', [CheckoutController::class, 'confirm'])->name('checkout.confirm');
+    Route::get('/checkout/payment', [CheckoutController::class, 'payment'])->name('checkout.payment');
+    Route::get('/checkout/bank-transfer', [CheckoutController::class, 'bankTransfer'])->name('checkout.bank-transfer');
+    Route::get('/order-success', [CheckoutController::class, 'orderSuccess'])->name('order.success');
+});
 
-// ---------------- API (USER SITE) ----------------
+// Policy page
+Route::get('/chinh-sach', function () {
+    return view('policy');
+})->name('policy');
+
+// Order detail routes (User)
+Route::middleware('auth')->group(function () {
+    Route::get('/orders', [UserOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderId}', [UserOrderController::class, 'show'])->name('order.detail');
+    Route::post('/orders/{orderId}/cancel', [UserOrderController::class, 'cancel'])->name('order.cancel');
+});
+
+// API Routes for user-facing website
 Route::prefix('api')->group(function () {
     Route::get('/products', [ProductPageController::class, 'apiIndex']);
-    Route::get('/landing/products', [ProductPageController::class, 'landingProducts']);
     Route::get('/products/{id}/variants', [ProductPageController::class, 'getVariants']);
-
+    Route::get('/landing/products', [ProductPageController::class, 'landingProducts']);
     Route::get('/categories', [CategoryController::class, 'apiIndex']);
     Route::get('/categories/{id}/products', [CategoryController::class, 'getProductsByCategory']);
-
+    
+    // Cart APIs
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart/add', [CartController::class, 'add'])->middleware('web');
     Route::post('/cart/update', [CartController::class, 'updateQuantity'])->middleware('web');
     Route::post('/cart/delete', [CartController::class, 'delete'])->middleware('web');
     Route::post('/cart/voucher', [CartController::class, 'applyVoucher'])->middleware('web');
+    
+    // Voucher APIs
+    Route::get('/vouchers', [VoucherController::class, 'getVouchers']);
+    Route::post('/vouchers/apply', [VoucherController::class, 'applyVoucher'])->middleware('web');
+    Route::post('/vouchers/remove', [VoucherController::class, 'removeVoucher'])->middleware('web');
+    
+    // Location APIs
+    Route::get('/provinces', [LocationController::class, 'getProvinces']);
+    Route::get('/provinces/{id}/wards', [LocationController::class, 'getWardsByProvince']);
+    Route::get('/provinces/{slug}/wards', [LocationController::class, 'getWardsByProvinceSlug']);
+    Route::get('/shipping-fee/{provinceId}', function($provinceId) {
+        $province = Province::find($provinceId);
+        if (!$province) {
+            return response()->json(['success' => false, 'message' => 'Tỉnh không tồn tại']);
+        }
+        
+        $shippingFee = ShippingHelper::calculateShippingFee($province->name);
+        $zone = ShippingHelper::getZone($province->name);
+        
+        return response()->json([
+            'success' => true,
+            'shipping_fee' => $shippingFee,
+            'zone' => $zone,
+            'province_name' => $province->name
+        ]);
+    });
+    
+    // Address & Checkout APIs
+    Route::middleware('auth')->group(function () {
+        Route::get('/user/addresses', [AddressController::class, 'index']);
+        Route::post('/user/addresses', [AddressController::class, 'store']);
+        Route::put('/user/addresses/{id}', [AddressController::class, 'update']);
+        Route::delete('/user/addresses/{id}', [AddressController::class, 'destroy']);
+        Route::post('/user/addresses/{id}/default', [AddressController::class, 'setDefault']);
+        
+        Route::post('/checkout/set-selected-items', [CheckoutController::class, 'setSelectedItems']);
+        Route::post('/checkout/set-address', [CheckoutController::class, 'setAddress']);
+        Route::post('/checkout/set-note', [CheckoutController::class, 'setNote']);
+        Route::post('/checkout/set-payment-method', [CheckoutController::class, 'setPaymentMethod']);
+        Route::post('/checkout/prepare-bank-transfer', [CheckoutController::class, 'prepareBankTransfer']);
+        Route::post('/checkout/complete-bank-transfer', [CheckoutController::class, 'completeBankTransfer']);
+        Route::post('/checkout/create-order', [CheckoutController::class, 'createOrder']);
+    });
 
     // Reviews
     Route::get('/reviews/{product_id}', [ReviewController::class, 'getReviews']);
-    Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth:api');
+    // Note: 'auth' middleware is typically used for web sessions, 'auth:api' for stateless tokens.
+    // Adjusted to 'auth' to match the rest of the web.php file. Change back to 'auth:api' if using Passport/Sanctum specifically.
+    Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth'); 
     Route::get('/products/related', [ReviewController::class, 'getRelatedProducts']);
-});
-
-// ---------------- CHECKOUT ----------------
-Route::get('/checkout', [CheckoutController::class, 'showCheckout'])->middleware('auth');
-Route::post('/checkout/save-draft', [CheckoutController::class, 'saveDraft'])->middleware('auth');
-Route::get('/order/{code}', [CheckoutController::class, 'showOrderDetail'])->name('order.detail')->middleware('auth');
-
-Route::prefix('api')->middleware('auth')->group(function () {
-    Route::get('/checkout/summary', [CheckoutController::class, 'summary']);
-    Route::post('/checkout/create', [CheckoutController::class, 'createOrder']);
-    Route::get('/order/{code}', [CheckoutController::class, 'getOrder']);
-    Route::post('/order/complete', [CheckoutController::class, 'completeOrder']);
 });

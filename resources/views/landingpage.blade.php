@@ -444,7 +444,7 @@
             </div>
         </div>
         <div class="flex items-center gap-1">
-            <button class="relative flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" onclick="window.location.href='/gio-hang'">
+            <button class="relative flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" onclick="window.location.href='/cart'">
                 <span class="material-symbols-outlined text-gray-800 dark:text-white">shopping_bag</span>
                 <span class="absolute top-2 right-2 flex h-2 w-2">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>

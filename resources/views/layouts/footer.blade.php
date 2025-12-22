@@ -35,7 +35,7 @@
                         <a href="/gioi-thieu" style="color: #ccc; text-decoration: none; font-size: 0.9rem; transition: color 0.3s;">Giới thiệu</a>
                     </li>
                     <li style="margin-bottom: 8px;">
-                        <a href="/gio-hang" style="color: #ccc; text-decoration: none; font-size: 0.9rem; transition: color 0.3s;">Giỏ hàng</a>
+                        <a href="/cart" style="color: #ccc; text-decoration: none; font-size: 0.9rem; transition: color 0.3s;">Giỏ hàng</a>
                     </li>
                 </ul>
             </div>

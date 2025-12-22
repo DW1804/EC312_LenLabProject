@@ -4,7 +4,15 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>LENLAB Homepage</title>
+    <title>{{ getSiteName() }} Homepage</title>
+    
+    {{-- Favicon --}}
+    <link rel="icon" type="image/x-icon" href="{{ getFaviconUrl() }}">
+    
+    {{-- Dynamic CSS from settings --}}
+    <style>
+        {!! getDynamicCss() !!}
+    </style>
     <link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -309,7 +317,7 @@
         }
         
         body.loading::after {
-            content: 'LENLAB';
+            content: '{{ getSiteName() }}';
             position: fixed;
             top: 50%;
             left: 50%;
@@ -424,8 +432,8 @@
             <button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" id="mobileMenuBtn">
                 <span class="material-symbols-outlined text-gray-800 dark:text-white">menu</span>
             </button>
-            <div class="hidden sm:block text-2xl font-bold tracking-tight text-gray-900 dark:text-white">LENLAB</div>
-            <div class="sm:hidden text-xl font-bold tracking-tight text-gray-900 dark:text-white">LENLAB</div>
+            <div class="hidden sm:block text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ getSiteName() }}</div>
+            <div class="sm:hidden text-xl font-bold tracking-tight text-gray-900 dark:text-white">{{ getSiteName() }}</div>
         </div>
         <div class="flex-1 max-w-md mx-2">
             <div class="relative group">
@@ -553,7 +561,7 @@
 <footer class="bg-white dark:bg-[#0d140f] border-t border-gray-200 dark:border-white/5 pt-12 pb-8 px-4 mt-auto">
     <div class="flex flex-col gap-8">
         <div class="flex flex-col gap-4">
-            <div class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">LENLAB</div>
+            <div class="text-2xl font-black tracking-tight text-gray-900 dark:text-white">{{ getSiteName() }}</div>
             <p class="text-sm text-gray-500 dark:text-gray-400 max-w-xs">Thương hiệu đồ len thủ công hàng đầu, mang đến sự ấm áp và phong cách sống bền vững cho bạn.</p>
         </div>
         <div class="grid grid-cols-2 gap-8">
@@ -584,7 +592,7 @@
                     <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"></path></svg>
                 </a>
             </div>
-            <div class="text-xs text-gray-400 dark:text-gray-500">© 2023 LENLAB. All rights reserved.</div>
+            <div class="text-xs text-gray-400 dark:text-gray-500">© 2023 {{ getSiteName() }}. All rights reserved.</div>
         </div>
     </div>
 </footer>
@@ -600,8 +608,9 @@ $(document).ready(function() {
             if (response.success && response.categories) {
                 let html = '';
                 response.categories.forEach(category => {
+                    const href = category.url || `/san-pham?search=${encodeURIComponent(category.keyword)}`;
                     html += `
-                        <a class="flex-none w-24 flex flex-col items-center gap-2 snap-start group category-item" href="/san-pham?search=${encodeURIComponent(category.keyword)}" title="${category.description}">
+                        <a class="flex-none w-24 flex flex-col items-center gap-2 snap-start group category-item" href="${href}" title="${category.description}">
                             <div class="w-20 h-20 rounded-[1.5rem] bg-[#FFF3E0] dark:bg-[#3E2723] flex items-center justify-center transition-transform duration-300 group-hover:scale-105 group-hover:shadow-md border border-orange-100 dark:border-white/5">
                                 <span class="material-symbols-outlined text-3xl text-orange-400">${category.icon}</span>
                             </div>
@@ -617,14 +626,16 @@ $(document).ready(function() {
                 { name: 'Nguyên phụ liệu', icon: 'inventory_2', keyword: 'Nguyên phụ liệu' },
                 { name: 'Đồ trang trí', icon: 'potted_plant', keyword: 'Đồ trang trí' },
                 { name: 'Thời trang len', icon: 'checkroom', keyword: 'Thời trang len' },
+                { name: 'Sản phẩm số', icon: 'download', keyword: 'digital', url: '/san-pham-so' },
                 { name: 'Combo tiết kiệm', icon: 'savings', keyword: 'Combo tự làm' },
                 { name: 'Thú bông len', icon: 'pets', keyword: 'Thú bông' }
             ];
             
             let html = '';
             fallbackCategories.forEach(category => {
+                const href = category.url || `/san-pham?search=${encodeURIComponent(category.keyword)}`;
                 html += `
-                    <a class="flex-none w-24 flex flex-col items-center gap-2 snap-start group category-item" href="/san-pham?search=${encodeURIComponent(category.keyword)}">
+                    <a class="flex-none w-24 flex flex-col items-center gap-2 snap-start group category-item" href="${href}">
                         <div class="w-20 h-20 rounded-[1.5rem] bg-[#FFF3E0] dark:bg-[#3E2723] flex items-center justify-center transition-transform duration-300 group-hover:scale-105 group-hover:shadow-md border border-orange-100 dark:border-white/5">
                             <span class="material-symbols-outlined text-3xl text-orange-400">${category.icon}</span>
                         </div>
@@ -892,7 +903,7 @@ $(document).ready(function() {
                             </a>
                         </div>
                         
-                        <p class="text-center text-yellow-300/60 text-xs mt-4">© 2025 LENLAB. All rights reserved.</p>
+                        <p class="text-center text-yellow-300/60 text-xs mt-4">© 2025 {{ getSiteName() }}. All rights reserved.</p>
                     </div>
                 </div>
             </div>

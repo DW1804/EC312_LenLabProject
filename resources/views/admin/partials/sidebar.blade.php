@@ -2,8 +2,12 @@
     {{-- Brand --}}
     <div class="h-16 flex items-center px-6 border-b border-border-light dark:border-border-dark bg-white dark:bg-surface-dark">
         <div class="flex items-center gap-3">
-            <span class="material-icons-round text-primary text-3xl">gesture</span>
-            <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">LENLAB</h1>
+            @if($logoUrl)
+                <img src="{{ $logoUrl }}" alt="{{ $siteName }}" class="w-8 h-8 object-contain">
+            @else
+                <span class="material-icons-round text-primary text-3xl">gesture</span>
+            @endif
+            <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{{ $siteName }}</h1>
         </div>
     </div>
 
@@ -11,31 +15,55 @@
     <nav class="flex-1 flex flex-col overflow-y-auto bg-white dark:bg-surface-dark">
         <ul class="space-y-1 px-3 py-4">
 
-            {{-- Tổng quan --}}
+{{-- Tổng quan --}}
             <li>
+                {{-- Nút cha (Parent) --}}
                 <a href="{{ route('admin.dashboard') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors group
-                   {{ request()->routeIs('admin.dashboard') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                   {{-- Logic active cho nút cha: Sáng khi đang ở Dashboard HOẶC UI Config --}}
+                   {{ request()->routeIs('admin.dashboard') || request()->routeIs('admin.ui_config') 
+                        ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' 
+                        : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800' 
+                   }}">
                     <span class="material-icons-round transition-colors
-                        {{ request()->routeIs('admin.dashboard') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
+                        {{ request()->routeIs('admin.dashboard') || request()->routeIs('admin.ui_config') 
+                            ? 'text-primary' 
+                            : 'text-gray-400 group-hover:text-primary' 
+                        }}">
                         dashboard
                     </span>
                     <span>Tổng quan</span>
                 </a>
 
+                {{-- Menu con (Submenu) --}}
                 <ul class="space-y-1 pl-11 mt-1">
+                    
+                    {{-- Mục con 1: Dashboard --}}
                     <li>
                         <a class="block px-3 py-1.5 text-sm transition-colors
-                           {{ request()->routeIs('admin.dashboard') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           {{ request()->routeIs('admin.dashboard') 
+                                ? 'text-primary font-medium' 
+                                : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' 
+                           }}"
                            href="{{ route('admin.dashboard') }}">
                             Dashboard
                         </a>
                     </li>
+
+                    {{-- Mục con 2: Cấu hình UI (Đã chỉnh style giống hệt Dashboard) --}}
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
-                            UI Configuration
+                        <a href="{{ route('admin.ui_config') }}"
+                           class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.ui_config') 
+                                ? 'text-primary font-medium' 
+                                : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' 
+                           }}">
+                            Cấu hình UI
                         </a>
+                    </li>
+                </ul>
+            </li>
+</a>
                     </li>
                 </ul>
             </li>
@@ -60,9 +88,13 @@
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
-                            Sản phẩm số
+                        <a href="{{ route('admin.digital-products.index') }}" 
+                             class="block px-3 py-1.5 text-sm transition-colors
+                             {{ request()->routeIs('admin.digital-products.*') 
+                             ? 'text-primary font-medium' 
+                           : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' 
+                             }}">
+                          Sản phẩm số
                         </a>
                     </li>
                     <li>

@@ -549,7 +549,29 @@
                 };
                 
                 // Thêm thông tin variant nếu có
-                if (selectedVariant) cartData.variant_name = selectedVariant;
+                if (selectedVariant) {
+                    // Tìm variant_id từ selectedVariant name
+                    const variant = productVariants.find(v => v.variant_name === selectedVariant);
+                    if (variant) {
+                        cartData.variant_id = variant.id;
+                    } else {
+                        // Fallback: sử dụng variant đầu tiên nếu không tìm thấy
+                        if (productVariants.length > 0) {
+                            cartData.variant_id = productVariants[0].id;
+                        }
+                    }
+                } else {
+                    // Nếu không có variant được chọn, sử dụng variant đầu tiên
+                    if (productVariants.length > 0) {
+                        cartData.variant_id = productVariants[0].id;
+                    }
+                }
+                
+                // Đảm bảo có variant_id
+                if (!cartData.variant_id) {
+                    alert('Không thể xác định biến thể sản phẩm. Vui lòng thử lại!');
+                    return;
+                }
                 
                 $.post('/api/cart/add', cartData, function(response) {
                     if (response.success) {

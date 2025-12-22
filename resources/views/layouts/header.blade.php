@@ -20,6 +20,7 @@
                         <li><a href="/san-pham?search=Nguyên phụ liệu">Nguyên phụ liệu</a></li>
                         <li><a href="/san-pham?search=Đồ trang trí">Đồ trang trí</a></li>
                         <li><a href="/san-pham?search=Thời trang len">Thời trang len</a></li>
+                        <li><a href="/san-pham-so">Sản phẩm số</a></li>
                         <li><a href="/san-pham?search=Combo tự làm">Combo tự làm</a></li>
                         <li><a href="/san-pham?search=Sách hướng dẫn">Sách hướng dẫn</a></li>
                         <li><a href="/san-pham?search=Thú bông len">Thú bông len</a></li>
@@ -109,6 +110,7 @@
                         <li><a href="/san-pham?search=Nguyên phụ liệu" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Nguyên phụ liệu</a></li>
                         <li><a href="/san-pham?search=Đồ trang trí" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Đồ trang trí</a></li>
                         <li><a href="/san-pham?search=Thời trang len" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Thời trang len</a></li>
+                        <li><a href="/san-pham-so" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Sản phẩm số</a></li>
                         <li><a href="/san-pham?search=Combo tự làm" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Combo tự làm</a></li>
                         <li><a href="/san-pham?search=Sách hướng dẫn" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Sách hướng dẫn</a></li>
                         <li><a href="/san-pham?search=Thú bông len" style="text-decoration: none; color: #666; font-size: 0.9rem; display: block; padding: 5px 0;">Thú bông len</a></li>

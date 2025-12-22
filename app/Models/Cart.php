@@ -18,7 +18,8 @@ class Cart extends Model
         'price_at_time',
         'variant_info',
         'session_id',
-         'variant_id'
+        'variant_id',
+        'product_type'
     ];
 
     protected $casts = [
@@ -35,9 +36,24 @@ class Cart extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function digitalProduct()
+    {
+        return $this->belongsTo(DigitalProduct::class, 'product_id');
+    }
+
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id'); 
+    }
+
+    // Get the actual product based on type
+    public function getActualProduct()
+    {
+        if ($this->product_type === 'digital') {
+            return $this->digitalProduct;
+        }
+        return $this->product;
     }
 
 

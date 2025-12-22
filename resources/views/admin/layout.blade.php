@@ -4,9 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'LENLAB Admin')</title>
+    <title>@yield('title', $siteName . ' - Dashboard')</title>
 
-    <!-- Tailwind CSS -->
+    {{-- Favicon --}}
+    <link rel="icon" type="image/x-icon" href="{{ $faviconUrl }}">
+
+    {{-- Dynamic CSS from settings --}}
+    <style>
+        {!! $dynamicCss ?? '' !!}
+        
+        /* Additional dark mode fixes */
+        .dark {
+            color-scheme: dark;
+        }
+        
+        .dark * {
+            border-color: rgb(63 63 70 / 1) !important;
+        }
+        
+        .dark .bg-white {
+            background-color: rgb(39 39 42 / 1) !important;
+        }
+        
+        .dark .text-gray-900 {
+            color: rgb(229 231 235 / 1) !important;
+        }
+        
+        .dark .text-gray-800 {
+            color: rgb(229 231 235 / 1) !important;
+        }
+        
+        .dark .bg-gray-50 {
+            background-color: rgb(39 39 42 / 1) !important;
+        }
+        
+        .dark .bg-gray-100 {
+            background-color: rgb(63 63 70 / 1) !important;
+        }
+        
+        /* Ensure cards have proper dark background */
+        .dark .bg-surface-light {
+            background-color: rgb(39 39 42 / 1) !important;
+        }
+        
+        /* Fix any remaining white backgrounds */
+        .dark [class*="bg-white"] {
+            background-color: rgb(39 39 42 / 1) !important;
+        }
+    </style>
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
         tailwind.config = {
@@ -14,8 +60,8 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#D1A272',
-                        'primary-hover': '#b88a5d',
+                        primary: '{{ $primaryColor }}',
+                        'primary-hover': '{{ \App\Helpers\SettingsHelper::adjustBrightness($primaryColor, -20) }}',
                         secondary: '#64748b',
                         success: '#10b981',
                         danger: '#ef4444',
@@ -42,17 +88,13 @@
         };
     </script>
 
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
-    <!-- Bootstrap CSS (for components compatibility) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- Custom CSS for Bootstrap + Tailwind compatibility -->
     <style>
         /* Reset Bootstrap conflicts with Tailwind */
         .btn {
@@ -128,17 +170,16 @@
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans transition-colors duration-200 min-h-screen">
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar -->
         @include('admin.partials.sidebar')
 
-        <!-- Main Content -->
         <main class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark">
-            <!-- Header -->
-            @include('admin.partials.header')
-
-            <!-- Content Area -->
+            
+            @hasSection('header')
+                @yield('header')
+            @else
+                @include('admin.partials.header')
+            @endif
             <div class="p-6">
-                <!-- Flash Messages -->
                 @if(session('success'))
                     <div class="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 px-4 py-3 rounded-lg flex items-center gap-2" 
                          id="successAlert">
@@ -182,16 +223,13 @@
                     </div>
                 @endif
 
-                <!-- Main Content -->
                 @yield('content')
             </div>
         </main>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Custom JS -->
     <script>
         // Mobile sidebar toggle (sử dụng ID từ header của bạn)
         document.getElementById('btnSidebar')?.addEventListener('click', function() {
@@ -214,6 +252,46 @@
 
         // CSRF Token for AJAX
         window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Dark mode initialization and persistence
+        (function() {
+            // Check for saved theme preference or default to 'light'
+            const theme = localStorage.getItem('theme') || 'light';
+            
+            // Apply theme
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            
+            // Force refresh of styles
+            setTimeout(() => {
+                document.body.style.display = 'none';
+                document.body.offsetHeight; // Trigger reflow
+                document.body.style.display = '';
+            }, 10);
+        })();
+        
+        // Theme toggle function (if you have a toggle button)
+        window.toggleTheme = function() {
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            
+            // Force refresh
+            setTimeout(() => {
+                document.body.style.display = 'none';
+                document.body.offsetHeight;
+                document.body.style.display = '';
+            }, 10);
+        };
     </script>
 
     @stack('scripts')

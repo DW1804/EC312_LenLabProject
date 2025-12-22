@@ -13,23 +13,36 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
-
+use App\Http\Controllers\Admin\UiConfigController;
+use App\Http\Controllers\Admin\DigitalProductController;
 // ✅ Site controllers
 use App\Http\Controllers\ProductPageController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\PostController;
+//use App\Http\Controllers\PostController;
 use App\Http\Controllers\ReviewController;
-
 // (Nếu có marketing controllers thì import thêm, ví dụ)
 // use App\Http\Controllers\Marketing\PostController as MarketingPostController;
 // use App\Http\Controllers\Marketing\BannerController as MarketingBannerController;
 
 Route::get('/', fn () => view('landingpage'));
 
+// Dynamic CSS route
+Route::get('/css/dynamic.css', function () {
+    $css = \App\Helpers\SettingsHelper::generateDynamicCss();
+    return response($css)->header('Content-Type', 'text/css');
+})->name('dynamic.css');
+
 // ---------------- USER PAGES ----------------
 Route::get('/san-pham', [ProductPageController::class, 'index'])->name('products');
 Route::get('/san-pham/{id}', [ProductPageController::class, 'show'])->name('product.detail');
+
+// Digital Products for customers
+Route::get('/san-pham-so', [\App\Http\Controllers\DigitalProductController::class, 'index'])->name('digital-products.index');
+Route::get('/san-pham-so/{id}', [\App\Http\Controllers\DigitalProductController::class, 'show'])->name('digital-products.show');
+Route::post('/san-pham-so/{id}/mua', [\App\Http\Controllers\DigitalProductController::class, 'purchase'])->name('digital-products.purchase');
+Route::get('/tai-xuong/{orderCode}', [\App\Http\Controllers\DigitalProductController::class, 'download'])->name('digital-products.download');
+Route::get('/tai-xuong/{orderCode}/file/{fileIndex}', [\App\Http\Controllers\DigitalProductController::class, 'downloadFile'])->name('digital-products.download-file');
 
 Route::get('/gioi-thieu', fn () => view('intro'))->name('about');
 
@@ -62,7 +75,13 @@ Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admi
 // ---------------- ADMIN AREA ----------------
 Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-
+    Route::get('/ui-configuration', [UiConfigController::class, 'index'])->name('admin.ui_config');
+    Route::get('/products/digital', [DigitalProductController::class, 'index'])->name('admin.products.digital');
+    // UI Configuration API routes
+    Route::post('/ui-configuration/update', [UiConfigController::class, 'update'])->name('admin.ui_config.update');
+    Route::get('/ui-configuration/settings', [UiConfigController::class, 'getSettings'])->name('admin.ui_config.settings');
+    Route::delete('/ui-configuration/file', [UiConfigController::class, 'deleteFile'])->name('admin.ui_config.delete_file');
+    
     // Customers
     Route::get('/customers', [CustomerController::class, 'index'])->name('admin.customers.index');
     Route::get('/customers/create', [CustomerController::class, 'create'])->name('admin.customers.create');
@@ -93,6 +112,14 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::delete('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete');
     Route::delete('/products', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete');
     Route::post('/products/{id}/toggle-active', [ProductController::class, 'toggleActive'])->name('admin.products.toggleActive');
+    
+    // Digital Products
+    Route::get('/digital-products', [App\Http\Controllers\Admin\DigitalProductController::class, 'index'])->name('admin.digital-products.index');
+    Route::post('/digital-products', [App\Http\Controllers\Admin\DigitalProductController::class, 'store'])->name('admin.digital-products.store');
+    Route::post('/digital-products/upload', [App\Http\Controllers\Admin\DigitalProductController::class, 'upload'])->name('admin.digital-products.upload');
+    Route::post('/digital-products/add-link', [App\Http\Controllers\Admin\DigitalProductController::class, 'addLink'])->name('admin.digital-products.add-link');
+    Route::delete('/digital-products/delete', [App\Http\Controllers\Admin\DigitalProductController::class, 'delete'])->name('admin.digital-products.delete');
+    Route::post('/digital-products/{id}/toggle-active', [App\Http\Controllers\Admin\DigitalProductController::class, 'toggleActive'])->name('admin.digital-products.toggle-active');
 });
 
 // ---------------- MARKETING AREA ----------------
@@ -104,7 +131,7 @@ Route::prefix('marketing')->middleware(['admin', 'admin.role:marketing'])->group
 });
 
 // Public post detail
-Route::get('/bai-viet/{id}', [PostController::class, 'show'])->name('post.show');
+//Route::get('/bai-viet/{id}', [PostController::class, 'show'])->name('post.show');
 
 // ---------------- API (USER SITE) ----------------
 Route::prefix('api')->group(function () {

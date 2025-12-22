@@ -232,31 +232,6 @@
             });
         });
 
-        function getVariantInfo(item) {
-            let variantHtml = '';
-            
-            if (item.variant_info) {
-                let variantInfo;
-                try {
-                    variantInfo = typeof item.variant_info === 'string' 
-                        ? JSON.parse(item.variant_info) 
-                        : item.variant_info;
-                } catch (e) {
-                    variantInfo = {};
-                }
-                
-                if (variantInfo.variant_name) {
-                    variantHtml = `<p class="text-gray-400 text-sm mb-2">Loại: ${variantInfo.variant_name}</p>`;
-                } else {
-                    variantHtml = `<p class="text-gray-400 text-sm mb-2">${item.product?.category || ''}</p>`;
-                }
-            } else {
-                variantHtml = `<p class="text-gray-400 text-sm mb-2">${item.product?.category || ''}</p>`;
-            }
-            
-            return variantHtml;
-        }
-
         function loadCart() {
             $('#loadingCart').show();
             
@@ -292,12 +267,25 @@
             let html = '';
             
             cart.forEach(item => {
-                const product = item.product || {};
-                const imageUrl = product.image && product.image !== 'default.jpg' 
-                    ? `/PRODUCT-IMG/${product.image}` 
-                    : `https://via.placeholder.com/80x80/FAC638/FFFFFF?text=${encodeURIComponent((product.name || 'SP').substring(0, 2))}`;
+                // Handle both normal products and digital products
+                let product, imageUrl, productName, category, price;
                 
-                const price = parseFloat(product.price) || 0;
+                if (item.product_type === 'digital' && item.digital_product) {
+                    product = item.digital_product;
+                    productName = product.name;
+                    category = getDigitalProductType(product.type);
+                    price = parseFloat(product.price) || 0;
+                    imageUrl = product.thumbnail || `https://via.placeholder.com/80x80/FAC638/FFFFFF?text=📄`;
+                } else {
+                    product = item.product || {};
+                    productName = product.name || 'Sản phẩm';
+                    category = product.category || '';
+                    price = parseFloat(product.price) || 0;
+                    imageUrl = product.image && product.image !== 'default.jpg' 
+                        ? `/PRODUCT-IMG/${product.image}` 
+                        : `https://via.placeholder.com/80x80/FAC638/FFFFFF?text=${encodeURIComponent(productName.substring(0, 2))}`;
+                }
+                
                 const formattedPrice = price.toLocaleString('vi-VN');
                 
                 html += `
@@ -305,15 +293,16 @@
                         <div class="flex items-center gap-4">
                             <!-- Product Image -->
                             <img src="${imageUrl}" 
-                                 alt="${product.name || 'Sản phẩm'}" 
+                                 alt="${productName}" 
                                  class="w-20 h-20 object-cover rounded-xl"
-                                 onerror="this.src='https://via.placeholder.com/80x80/FAC638/FFFFFF?text=${encodeURIComponent((product.name || 'SP').substring(0, 2))}'">
+                                 onerror="this.src='https://via.placeholder.com/80x80/FAC638/FFFFFF?text=${encodeURIComponent(productName.substring(0, 2))}'">
                             
                             <!-- Product Info -->
                             <div class="flex-1">
-                                <h3 class="text-white font-semibold mb-1">${product.name || 'Sản phẩm'}</h3>
-                                ${getVariantInfo(item)}
+                                <h3 class="text-white font-semibold mb-1">${productName}</h3>
+                                ${getVariantInfo(item, category)}
                                 <p class="text-primary font-bold">${formattedPrice}đ</p>
+                                ${item.product_type === 'digital' ? '<span class="inline-block px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full mt-1">Sản phẩm số</span>' : ''}
                             </div>
                             
                             <!-- Delete Button -->
@@ -324,19 +313,58 @@
                         
                         <!-- Quantity Controls -->
                         <div class="flex items-center justify-end gap-3 mt-4">
-                            <button onclick="updateQuantity(${item.id}, 'decrease')" class="quantity-btn">
-                                <span class="material-symbols-outlined text-sm">remove</span>
-                            </button>
-                            <span class="text-white font-semibold min-w-[20px] text-center">${item.quantity}</span>
-                            <button onclick="updateQuantity(${item.id}, 'increase')" class="quantity-btn add">
-                                <span class="material-symbols-outlined text-sm">add</span>
-                            </button>
+                            ${item.product_type === 'digital' ? 
+                                `<span class="text-gray-400 text-sm">Số lượng: ${item.quantity}</span>` :
+                                `<button onclick="updateQuantity(${item.id}, 'decrease')" class="quantity-btn">
+                                    <span class="material-symbols-outlined text-sm">remove</span>
+                                </button>
+                                <span class="text-white font-semibold min-w-[20px] text-center">${item.quantity}</span>
+                                <button onclick="updateQuantity(${item.id}, 'increase')" class="quantity-btn add">
+                                    <span class="material-symbols-outlined text-sm">add</span>
+                                </button>`
+                            }
                         </div>
                     </div>
                 `;
             });
             
             container.html(html);
+        }
+
+        function getDigitalProductType(type) {
+            switch(type) {
+                case 'course': return 'Khóa học';
+                case 'file': return 'Tài liệu';
+                case 'link': return 'Link';
+                default: return 'Sản phẩm số';
+            }
+        }
+
+        function getVariantInfo(item, category = '') {
+            let variantHtml = '';
+            
+            if (item.product_type === 'digital') {
+                variantHtml = `<p class="text-gray-400 text-sm mb-2">${category}</p>`;
+            } else if (item.variant_info) {
+                let variantInfo;
+                try {
+                    variantInfo = typeof item.variant_info === 'string' 
+                        ? JSON.parse(item.variant_info) 
+                        : item.variant_info;
+                } catch (e) {
+                    variantInfo = {};
+                }
+                
+                if (variantInfo.variant_name) {
+                    variantHtml = `<p class="text-gray-400 text-sm mb-2">Loại: ${variantInfo.variant_name}</p>`;
+                } else {
+                    variantHtml = `<p class="text-gray-400 text-sm mb-2">${category}</p>`;
+                }
+            } else {
+                variantHtml = `<p class="text-gray-400 text-sm mb-2">${category}</p>`;
+            }
+            
+            return variantHtml;
         }
 
         function showEmptyCart() {
@@ -380,7 +408,14 @@
             let subtotal = 0;
             
             cart.forEach(item => {
-                const price = parseFloat(item.product?.price) || 0;
+                let price = 0;
+                
+                if (item.product_type === 'digital' && item.digital_product) {
+                    price = parseFloat(item.digital_product.price) || 0;
+                } else if (item.product) {
+                    price = parseFloat(item.product.price) || 0;
+                }
+                
                 subtotal += price * item.quantity;
             });
             

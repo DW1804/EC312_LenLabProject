@@ -2,7 +2,7 @@
 
 @extends('admin.layout')
 
-@section('title', 'LENLAB - Dashboard')
+@section('title', $siteName . ' - Dashboard')
 
 @php
     // Variables for header
@@ -25,7 +25,7 @@
             </div>
             <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Khách hàng</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $customerCount }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $totalCustomers }}</p>
             </div>
         </div>
     </div>
@@ -40,7 +40,7 @@
             </div>
             <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Sản phẩm</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $productCount }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $totalProducts }}</p>
             </div>
         </div>
     </div>
@@ -55,7 +55,7 @@
             </div>
             <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Đơn hàng</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $orderCount }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $totalOrders }}</p>
             </div>
         </div>
     </div>
@@ -70,7 +70,7 @@
             </div>
             <div class="ml-4">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Chờ xử lý</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $pendingOrderCount }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $pendingOrders }}</p>
             </div>
         </div>
     </div>
@@ -80,9 +80,40 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Order Status Chart -->
     <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-border-light dark:border-border-dark shadow-sm">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Trạng thái đơn hàng</h3>
-        <div class="relative h-64">
-            <canvas id="orderStatusChart"></canvas>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 text-center">Trạng thái đơn hàng</h3>
+        
+        <!-- Chart Container - Centered -->
+        <div class="flex flex-col items-center">
+            <div class="relative w-64 h-64 mb-6">
+                <canvas id="orderStatusChart"></canvas>
+            </div>
+            
+            <!-- Custom Legend - Larger Text -->
+            <div class="grid grid-cols-1 gap-3 w-full max-w-xs">
+                <div class="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-4 bg-yellow-500 rounded-full"></div>
+                        <span class="text-base font-medium text-gray-900 dark:text-white">Chờ xử lý</span>
+                    </div>
+                    <span class="text-lg font-bold text-yellow-600 dark:text-yellow-400">{{ $pendingOrders ?? 0 }}</span>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                        <span class="text-base font-medium text-gray-900 dark:text-white">Đã giao</span>
+                    </div>
+                    <span class="text-lg font-bold text-green-600 dark:text-green-400">{{ $deliveredOrders ?? 0 }}</span>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-4 bg-red-500 rounded-full"></div>
+                        <span class="text-base font-medium text-gray-900 dark:text-white">Đã hủy</span>
+                    </div>
+                    <span class="text-lg font-bold text-red-600 dark:text-red-400">{{ $cancelledOrders ?? 0 }}</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -160,6 +191,41 @@
     </div>
 </div>
 
+<!-- Top 5 Products -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-6 border border-border-light dark:border-border-dark shadow-sm">
+    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top 5 Sản phẩm bán chạy</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Tên sản phẩm</th>
+                    <th class="text-right py-3 px-4 font-semibold text-gray-900 dark:text-white">Đã bán</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($topProducts as $product)
+                <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td class="py-3 px-4 text-gray-900 dark:text-white">{{ $product->name }}</td>
+                    <td class="py-3 px-4 text-right">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                            {{ $product->total_sold }} cái
+                        </span>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="2" class="py-8 px-4 text-center text-gray-500 dark:text-gray-400">
+                        Chưa có dữ liệu sản phẩm
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
 <!-- Quick Actions -->
 <div class="mt-8">
     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Thao tác nhanh</h3>
@@ -225,7 +291,7 @@
         data: {
             labels: ['Chờ xử lý', 'Đã xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'],
             datasets: [{
-                data: [{{ $pendingOrderCount }}, 0, 0, 0, 0],
+                data: [{{ $pendingOrders }}, 0, 0, 0, 0],
                 backgroundColor: [
                     '#fbbf24', // yellow-400
                     '#3b82f6', // blue-500
@@ -253,6 +319,125 @@
                 }
             },
             cutout: '60%'
+        }
+    });
+    <div class="card">
+    <div class="card-header">Doanh thu 7 ngày qua</div>
+    <div class="card-body">
+        <canvas id="revenueChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <script>
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    const revenueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {!! json_encode($dates) !!}, // Dữ liệu ngày từ Controller
+            datasets: [{
+                label: 'Doanh thu (VNĐ)',
+                data: {!! json_encode($totals) !!}, // Dữ liệu tiền từ Controller
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: true
+            }]
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // --- 1. BIỂU ĐỒ DOANH THU (Line Chart) ---
+        const ctxRevenue = document.getElementById('revenueChart');
+        if (ctxRevenue) {
+            new Chart(ctxRevenue.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: {!! json_encode($dates) !!}, // Ngày
+                    datasets: [{
+                        label: 'Doanh thu (VNĐ)',
+                        data: {!! json_encode($totals) !!}, // Tiền
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { callback: (val) => new Intl.NumberFormat('vi-VN').format(val) + ' đ' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 2. BIỂU ĐỒ TRẠNG THÁI ĐƠN HÀNG (Doughnut Chart) ---
+        const ctxStatus = document.getElementById('orderStatusChart');
+        if (ctxStatus) {
+            new Chart(ctxStatus.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Chờ xử lý', 'Đã giao', 'Đã hủy'],
+                    datasets: [{
+                        data: [
+                            {{ $pendingOrders ?? 0 }}, 
+                            {{ $deliveredOrders ?? 0 }}, 
+                            {{ $cancelledOrders ?? 0 }}
+                        ],
+                        backgroundColor: [
+                            '#eab308', // Yellow-500
+                            '#22c55e', // Green-500  
+                            '#ef4444'  // Red-500
+                        ],
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        hoverBorderWidth: 4,
+                        hoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            display: false // Tắt legend mặc định vì chúng ta có custom legend
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        duration: 1000
+                    },
+                    elements: {
+                        arc: {
+                            borderWidth: 3
+                        }
+                    }
+                }
+            });
         }
     });
 </script>

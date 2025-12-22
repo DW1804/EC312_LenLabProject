@@ -34,6 +34,14 @@ class CategoryController extends Controller
                     'description' => 'Áo len, khăn, mũ và phụ kiện thời trang'
                 ],
                 [
+                    'id' => 7,
+                    'name' => 'Sản phẩm số',
+                    'icon' => 'download',
+                    'keyword' => 'digital',
+                    'url' => '/san-pham-so',
+                    'description' => 'Tài liệu, khóa học và hướng dẫn kỹ thuật số'
+                ],
+                [
                     'id' => 4,
                     'name' => 'Combo tiết kiệm',
                     'icon' => 'savings',

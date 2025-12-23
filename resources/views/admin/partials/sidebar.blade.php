@@ -99,7 +99,7 @@
                     </li>
                     <li>
                         <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                           href="{{ route('admin.reviews.index') }}">
                             Đánh giá
                         </a>
                     </li>

@@ -16,7 +16,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductPageController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\CustomerReviewController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\AddressController;
@@ -31,7 +31,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UiConfigController;
 use App\Http\Controllers\Admin\DigitalProductController;
-
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 // (Nếu có marketing controllers thì import thêm, ví dụ)
 // use App\Http\Controllers\Marketing\PostController as MarketingPostController;
 // use App\Http\Controllers\Marketing\BannerController as MarketingBannerController;
@@ -117,7 +117,14 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/ui-configuration', [UiConfigController::class, 'index'])->name('admin.ui_config');
     Route::get('/products/digital', [DigitalProductController::class, 'index'])->name('admin.products.digital');
-    
+    // Route Đánh giá
+    Route::get('/reviews', [AdminReviewController::class, 'index'])->name('admin.reviews.index');
+    Route::post('/reviews/{review}/approve', [AdminReviewController::class, 'approve'])->name('admin.reviews.approve');
+    Route::post('/reviews/{review}/hide', [AdminReviewController::class, 'hide'])->name('admin.reviews.hide');
+    Route::delete('/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+    Route::post('/reviews/bulk-action', [AdminReviewController::class, 'bulkAction'])->name('admin.reviews.bulk-action');
+    Route::get('/reviews/{review}/show', [AdminReviewController::class, 'show'])->name('admin.reviews.show');
+    Route::get('/reviews/stats', [AdminReviewController::class, 'stats'])->name('admin.reviews.stats');
     // UI Configuration API routes
     Route::post('/ui-configuration/update', [UiConfigController::class, 'update'])->name('admin.ui_config.update');
     Route::get('/ui-configuration/settings', [UiConfigController::class, 'getSettings'])->name('admin.ui_config.settings');
@@ -249,9 +256,9 @@ Route::prefix('api')->group(function () {
     });
 
     // Reviews
-    Route::get('/reviews/{product_id}', [ReviewController::class, 'getReviews']);
-    // Note: 'auth' middleware is typically used for web sessions, 'auth:api' for stateless tokens.
-    // Adjusted to 'auth' to match the rest of the web.php file. Change back to 'auth:api' if using Passport/Sanctum specifically.
-    Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth'); 
-    Route::get('/products/related', [ReviewController::class, 'getRelatedProducts']);
+    Route::get('/reviews/{product_id}', [CustomerReviewController::class, 'getProductReviews']);
+    Route::post('/reviews', [CustomerReviewController::class, 'store'])->middleware('auth');
+    Route::put('/reviews/{review}', [CustomerReviewController::class, 'update'])->middleware('auth');
+    Route::delete('/reviews/{review}', [CustomerReviewController::class, 'destroy'])->middleware('auth');
+    Route::get('/user/reviews', [CustomerReviewController::class, 'getUserReviews'])->middleware('auth');
 });

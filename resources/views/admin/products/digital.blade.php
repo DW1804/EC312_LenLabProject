@@ -173,8 +173,9 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ảnh đại diện</label>
                 <div class="flex items-center gap-4">
-                    <div class="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="thumbnail-preview">
-                        <span class="material-icons-round text-gray-400">add_photo_alternate</span>
+                    <div class="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors overflow-hidden" id="thumbnail-preview-container" onclick="document.getElementById('thumbnail-input').click()">
+                        <img id="thumbnail-preview-image" src="" alt="Preview" class="w-full h-full object-cover rounded-lg hidden">
+                        <span class="material-icons-round text-gray-400" id="thumbnail-placeholder">add_photo_alternate</span>
                     </div>
                     <div class="flex-1">
                         <input type="file" name="thumbnail" id="thumbnail-input" accept="image/*" class="hidden">
@@ -331,6 +332,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Thumbnail preview
+    document.getElementById('thumbnail-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImage = document.getElementById('thumbnail-preview-image');
+                const placeholder = document.getElementById('thumbnail-placeholder');
+                
+                previewImage.src = e.target.result;
+                previewImage.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
     // Toggle active status
     document.addEventListener('change', function(e) {
         if (e.target.classList.contains('toggle-active-btn')) {
@@ -388,7 +406,125 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         }
+        
+        // Manage files button
+        if (e.target.closest('.manage-files-btn')) {
+            const btn = e.target.closest('.manage-files-btn');
+            const productId = btn.dataset.id;
+            openFilesModal(productId);
+        }
     });
+    
+    // File management modal
+    const filesModal = document.getElementById('files-modal');
+    let currentProductId = null;
+    
+    function openFilesModal(productId) {
+        currentProductId = productId;
+        filesModal.classList.remove('hidden');
+        filesModal.classList.add('flex');
+        loadProductFiles(productId);
+    }
+    
+    function closeFilesModal() {
+        filesModal.classList.add('hidden');
+        filesModal.classList.remove('flex');
+        currentProductId = null;
+    }
+    
+    document.getElementById('close-files-modal').addEventListener('click', closeFilesModal);
+    filesModal.addEventListener('click', (e) => {
+        if (e.target === filesModal) closeFilesModal();
+    });
+    
+    // File upload
+    document.getElementById('files-input').addEventListener('change', function(e) {
+        if (e.target.files.length > 0 && currentProductId) {
+            uploadFiles(currentProductId, e.target.files);
+        }
+    });
+    
+    // Add link
+    document.getElementById('add-link-btn').addEventListener('click', function() {
+        const url = document.getElementById('link-url').value;
+        const name = document.getElementById('link-name').value;
+        
+        if (url && name && currentProductId) {
+            addLink(currentProductId, name, url);
+        } else {
+            showNotification('Vui lòng nhập đầy đủ thông tin link', 'error');
+        }
+    });
+    
+    function loadProductFiles(productId) {
+        // This would load files from the server
+        // For now, show empty state
+        document.getElementById('product-files-list').innerHTML = `
+            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                <span class="material-icons-round text-4xl mb-2">folder_open</span>
+                <p>Chưa có file nào được tải lên</p>
+            </div>
+        `;
+    }
+    
+    function uploadFiles(productId, files) {
+        const formData = new FormData();
+        formData.append('product_id', productId);
+        
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files[]', files[i]);
+        }
+        
+        fetch('/admin/digital-products/upload', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                loadProductFiles(productId);
+                document.getElementById('files-input').value = '';
+            } else {
+                showNotification(data.message || 'Có lỗi xảy ra', 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Có lỗi xảy ra khi tải file', 'error');
+        });
+    }
+    
+    function addLink(productId, name, url) {
+        fetch('/admin/digital-products/add-link', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                link_name: name,
+                link_url: url
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                loadProductFiles(productId);
+                document.getElementById('link-url').value = '';
+                document.getElementById('link-name').value = '';
+            } else {
+                showNotification(data.message || 'Có lỗi xảy ra', 'error');
+            }
+        })
+        .catch(error => {
+            showNotification('Có lỗi xảy ra khi thêm link', 'error');
+        });
+    }
     
     function openModal(product = null) {
         if (product) {
@@ -407,6 +543,13 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
         form.reset();
+        // Reset thumbnail preview
+        const previewImage = document.getElementById('thumbnail-preview-image');
+        const placeholder = document.getElementById('thumbnail-placeholder');
+        
+        previewImage.classList.add('hidden');
+        previewImage.src = '';
+        placeholder.classList.remove('hidden');
     }
     
     function showNotification(message, type) {

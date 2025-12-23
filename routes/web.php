@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UiConfigController;
 use App\Http\Controllers\Admin\DigitalProductController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Admin\DashboardStatsController;
 // (Nếu có marketing controllers thì import thêm, ví dụ)
 // use App\Http\Controllers\Marketing\PostController as MarketingPostController;
 // use App\Http\Controllers\Marketing\BannerController as MarketingBannerController;
@@ -115,8 +116,19 @@ Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admi
 // ---------------- ADMIN AREA ----------------
 Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/dashboard-enhanced', function() {
+        return view('admin.dashboard-enhanced');
+    })->name('admin.dashboard.enhanced');
     Route::get('/ui-configuration', [UiConfigController::class, 'index'])->name('admin.ui_config');
     Route::get('/products/digital', [DigitalProductController::class, 'index'])->name('admin.products.digital');
+    // Dashboard Stats API
+    Route::get('/dashboard/stats/overview', [DashboardStatsController::class, 'overview'])->name('admin.dashboard.stats.overview');
+    Route::get('/dashboard/stats/reviews-chart', [DashboardStatsController::class, 'reviewsChart'])->name('admin.dashboard.stats.reviews-chart');
+    Route::get('/dashboard/stats/orders-chart', [DashboardStatsController::class, 'ordersChart'])->name('admin.dashboard.stats.orders-chart');
+    Route::get('/dashboard/stats/top-products', [DashboardStatsController::class, 'topProducts'])->name('admin.dashboard.stats.top-products');
+    Route::get('/dashboard/stats/recent-activity', [DashboardStatsController::class, 'recentActivity'])->name('admin.dashboard.stats.recent-activity');
+    Route::get('/dashboard/stats/rating-distribution', [DashboardStatsController::class, 'ratingDistribution'])->name('admin.dashboard.stats.rating-distribution');
+
     // Route Đánh giá
     Route::get('/reviews', [AdminReviewController::class, 'index'])->name('admin.reviews.index');
     Route::post('/reviews/{review}/approve', [AdminReviewController::class, 'approve'])->name('admin.reviews.approve');
